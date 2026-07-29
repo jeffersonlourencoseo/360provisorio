@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TMJL — Subir fotos do cliente</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body{background:#14110f; color:#f2ede4; font-family:system-ui,-apple-system,sans-serif;}
+  .frame{border:1px solid #2c2620; background:#1c1815; border-radius:16px;}
+  .amber{color:#e3b23c;}
+  .slot img{width:100%; height:160px; object-fit:cover; border-radius:12px;}
+  .slot{border:1.5px dashed #3a332a; border-radius:12px; position:relative;}
+  .slot.done{border-style:solid; border-color:#e3b23c;}
+  .spinner{border:2px solid #3a332a; border-top-color:#e3b23c; border-radius:50%; width:20px; height:20px; animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-md mx-auto px-5 py-8">
+
+  <h1 class="text-2xl font-semibold mb-1">Fotos do cliente</h1>
+  <p class="text-sm opacity-60 mb-6">Preenche o nome, tira as 3 fotos e o link já sai pronto.</p>
+
+  <!-- ============ CONFIG: preencha uma vez ============ -->
+  <script>
+    const CLOUD_NAME = "SEU_CLOUD_NAME";       // seu cloud name do Cloudinary
+    const UPLOAD_PRESET = "SEU_UPLOAD_PRESET"; // preset unsigned que você criar
+    const GALLERY_URL = "https://SEU-SITE.vercel.app/gallery.html"; // onde o gallery.html ficar hospedado
+  </script>
+  <!-- ==================================================== -->
+
+  <label class="block text-xs uppercase tracking-wide opacity-60 mb-1">Nome do cliente / estabelecimento</label>
+  <input id="nomeInput" type="text" placeholder="ex: salao-da-maria" class="w-full frame px-4 py-3 mb-6 bg-transparent outline-none text-base">
+
+  <div class="space-y-4 mb-6">
+    <div class="slot frame p-3" data-idx="1">
+      <p class="text-sm mb-2">1. Fachada</p>
+      <input type="file" accept="image/*" capture="environment" class="fileInput text-xs">
+      <div class="preview mt-2"></div>
+    </div>
+    <div class="slot frame p-3" data-idx="2">
+      <p class="text-sm mb-2">2. Interna</p>
+      <input type="file" accept="image/*" capture="environment" class="fileInput text-xs">
+      <div class="preview mt-2"></div>
+    </div>
+    <div class="slot frame p-3" data-idx="3">
+      <p class="text-sm mb-2">3. Interna</p>
+      <input type="file" accept="image/*" capture="environment" class="fileInput text-xs">
+      <div class="preview mt-2"></div>
+    </div>
+  </div>
+
+  <div id="resultBox" class="hidden frame p-4 mb-4">
+    <p class="text-sm mb-2 amber">Link pronto:</p>
+    <p id="linkText" class="text-xs break-all opacity-80 mb-3"></p>
+    <div class="flex gap-2">
+      <button id="copyBtn" class="flex-1 bg-white/10 rounded-lg py-2 text-sm">Copiar link</button>
+      <a id="waLink" target="_blank" class="flex-1 text-center rounded-lg py-2 text-sm font-semibold" style="background:#e3b23c; color:#14110f">Enviar no WhatsApp</a>
+    </div>
+  </div>
+
+  <p id="status" class="text-xs opacity-50 text-center"></p>
+</div>
+
+<script>
+  const uploaded = {1:null, 2:null, 3:null};
+  const statusEl = document.getElementById('status');
+
+  document.querySelectorAll('.slot').forEach(slot => {
+    const idx = slot.dataset.idx;
+    const input = slot.querySelector('.fileInput');
+    const preview = slot.querySelector('.preview');
+
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      preview.innerHTML = '<div class="spinner"></div>';
+      statusEl.textContent = `Subindo foto ${idx}...`;
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', UPLOAD_PRESET);
+
+      try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!data.secure_url) throw new Error(data.error?.message || 'falha no upload');
+
+        uploaded[idx] = data.secure_url;
+        slot.classList.add('done');
+        preview.innerHTML = `<img src="${data.secure_url}">`;
+        statusEl.textContent = '';
+        checkDone();
+      } catch (err) {
+        preview.innerHTML = '';
+        statusEl.textContent = `Erro na foto ${idx}: ${err.message}`;
+      }
+    });
+  });
+
+  function checkDone() {
+    const nome = document.getElementById('nomeInput').value.trim();
+    const urls = [uploaded[1], uploaded[2], uploaded[3]].filter(Boolean);
+    if (urls.length === 0) return;
+
+    const link = `${GALLERY_URL}?nome=${encodeURIComponent(nome)}` +
+      urls.map((u, i) => `&u${i+1}=${encodeURIComponent(u)}`).join('');
+
+    document.getElementById('resultBox').classList.remove('hidden');
+    document.getElementById('linkText').textContent = link;
+    document.getElementById('copyBtn').onclick = () => {
+      navigator.clipboard.writeText(link);
+      document.getElementById('copyBtn').textContent = 'Copiado!';
+      setTimeout(() => document.getElementById('copyBtn').textContent = 'Copiar link', 1500);
+    };
+    document.getElementById('waLink').href = `https://wa.me/?text=${encodeURIComponent('Olha as fotos do seu negócio: ' + link)}`;
+  }
+
+  document.getElementById('nomeInput').addEventListener('input', checkDone);
+</script>
+</body>
+</html>

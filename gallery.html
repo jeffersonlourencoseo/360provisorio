@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sua vitrine digital — TMJL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --ink:#14110f; --ink-soft:#1c1815; --cream:#f2ede4;
+    --amber:#e3b23c; --amber-dim:#8a6a24; --line:#2c2620;
+  }
+  body{background:var(--ink); color:var(--cream); font-family:'Inter',sans-serif;}
+  .display{font-family:'Fraunces',serif;}
+  .frame{border:1px solid var(--line); background:var(--ink-soft);
+    box-shadow: 0 0 0 1px rgba(227,178,60,0.06), 0 30px 60px -30px rgba(0,0,0,.8);}
+  .sign{box-shadow: 0 0 12px 2px rgba(227,178,60,.55), 0 0 2px rgba(227,178,60,.9);}
+  .fade-in{animation:fadeIn .6s ease both;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)}}
+  .btn-primary{background:var(--amber); color:var(--ink); font-weight:600; transition: transform .15s ease;}
+  .btn-primary:active{ transform: scale(.97); }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-md mx-auto px-5 pt-10 pb-24">
+
+  <header class="mb-8 fade-in">
+    <div class="flex items-center gap-2 mb-6">
+      <span class="w-2 h-2 rounded-full sign" style="background:var(--amber)"></span>
+      <span class="text-xs tracking-[0.2em] uppercase" style="color:var(--amber-dim)">TMJL · prévia exclusiva</span>
+    </div>
+    <h1 class="display text-3xl leading-tight mb-2">Assim seu negócio <br><span style="color:var(--amber)">aparece no Google.</span></h1>
+    <p id="subtitle" class="text-sm opacity-70">Fachada + interior — dá uma olhada antes de decidir.</p>
+  </header>
+
+  <div id="gallery" class="space-y-4"></div>
+
+  <div id="empty" class="hidden frame rounded-2xl p-6 text-center text-sm opacity-70 fade-in">
+    Esse link ainda não tem fotos. Confirma com quem te mandou.
+  </div>
+
+  <footer class="mt-10 frame rounded-2xl p-5 fade-in">
+    <p class="display text-lg mb-1">Gostou do que viu?</p>
+    <p class="text-sm opacity-70 mb-4">Fechando com a gente, essas fotos vão pro seu perfil do Google — e dá pra fazer mais ângulos do espaço.</p>
+    <a id="whatsBtn" href="#" target="_blank" class="btn-primary block text-center rounded-xl py-3">Falar no WhatsApp</a>
+  </footer>
+
+  <p class="text-center text-[11px] opacity-40 mt-6">TMJL Marketing Digital</p>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const nome = params.get('nome') || '';
+  const urls = [params.get('u1'), params.get('u2'), params.get('u3')].filter(Boolean);
+  const labels = ["Fachada", "Ambiente interno", "Ambiente interno"];
+
+  const galleryEl = document.getElementById('gallery');
+  const emptyEl = document.getElementById('empty');
+  const subtitleEl = document.getElementById('subtitle');
+  const whatsBtn = document.getElementById('whatsBtn');
+  const whatsNumber = "5521997751577"; // seu número
+
+  if (urls.length === 0) {
+    emptyEl.classList.remove('hidden');
+  } else {
+    if (nome) subtitleEl.textContent = `Fachada + interior de ${nome} — dá uma olhada antes de decidir.`;
+    whatsBtn.href = `https://wa.me/${whatsNumber}?text=` + encodeURIComponent(`Oi Jefferson, vi as fotos${nome ? ' de ' + nome : ''} e quero fechar!`);
+
+    urls.forEach((url, i) => {
+      const card = document.createElement('div');
+      card.className = 'frame rounded-2xl overflow-hidden fade-in';
+      card.style.animationDelay = (i * 0.08) + 's';
+      card.innerHTML = `
+        <img src="${url}" class="w-full h-64 object-cover" alt="${labels[i] || 'Foto'}">
+        <div class="px-4 py-3 text-xs tracking-wide uppercase" style="color:var(--amber-dim)">${labels[i] || 'Foto'}</div>
+      `;
+      galleryEl.appendChild(card);
+    });
+  }
+</script>
+</body>
+</html>
