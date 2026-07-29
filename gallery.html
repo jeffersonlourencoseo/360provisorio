@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+<script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 <style>
   :root{
     --ink:#14110f; --ink-soft:#1c1815; --cream:#f2ede4;
@@ -21,6 +23,8 @@
   @keyframes fadeIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)}}
   .btn-primary{background:var(--amber); color:var(--ink); font-weight:600; transition: transform .15s ease;}
   .btn-primary:active{ transform: scale(.97); }
+  .pano{ width:100%; height:260px; background:#0d0b09; }
+  .pnlm-load-box{ background:#1c1815 !important; }
 </style>
 </head>
 <body class="min-h-screen">
@@ -32,7 +36,7 @@
       <span class="text-xs tracking-[0.2em] uppercase" style="color:var(--amber-dim)">TMJL · prévia exclusiva</span>
     </div>
     <h1 class="display text-3xl leading-tight mb-2">Assim seu negócio <br><span style="color:var(--amber)">aparece no Google.</span></h1>
-    <p id="subtitle" class="text-sm opacity-70">Fachada + interior — dá uma olhada antes de decidir.</p>
+    <p id="subtitle" class="text-sm opacity-70">Arraste o dedo nas fotos abaixo pra olhar ao redor.</p>
   </header>
 
   <div id="gallery" class="space-y-4"></div>
@@ -65,18 +69,32 @@
   if (urls.length === 0) {
     emptyEl.classList.remove('hidden');
   } else {
-    if (nome) subtitleEl.textContent = `Fachada + interior de ${nome} — dá uma olhada antes de decidir.`;
+    if (nome) subtitleEl.textContent = `${nome} — arraste o dedo nas fotos abaixo pra olhar ao redor.`;
     whatsBtn.href = `https://wa.me/${whatsNumber}?text=` + encodeURIComponent(`Oi Jefferson, vi as fotos${nome ? ' de ' + nome : ''} e quero fechar!`);
 
     urls.forEach((url, i) => {
+      const panoId = 'pano' + i;
       const card = document.createElement('div');
       card.className = 'frame rounded-2xl overflow-hidden fade-in';
       card.style.animationDelay = (i * 0.08) + 's';
       card.innerHTML = `
-        <img src="${url}" class="w-full h-64 object-cover" alt="${labels[i] || 'Foto'}">
-        <div class="px-4 py-3 text-xs tracking-wide uppercase" style="color:var(--amber-dim)">${labels[i] || 'Foto'}</div>
+        <div id="${panoId}" class="pano"></div>
+        <div class="px-4 py-3 text-xs tracking-wide uppercase flex items-center justify-between" style="color:var(--amber-dim)">
+          <span>${labels[i] || 'Foto'}</span>
+          <span class="opacity-60">360°</span>
+        </div>
       `;
       galleryEl.appendChild(card);
+
+      pannellum.viewer(panoId, {
+        type: 'equirectangular',
+        panorama: url,
+        autoLoad: true,
+        compass: false,
+        showZoomCtrl: false,
+        showFullscreenCtrl: true,
+        hfov: 100
+      });
     });
   }
 </script>
