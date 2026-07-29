@@ -23,14 +23,14 @@
   @keyframes fadeIn{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:translateY(0)}}
   .btn-primary{background:var(--amber); color:var(--ink); font-weight:600; transition: transform .15s ease;}
   .btn-primary:active{ transform: scale(.97); }
-  .pano{ width:100%; height:260px; background:#0d0b09; }
+  .pano{ width:100%; height:80vh; max-height:720px; min-height:340px; background:#0d0b09; }
   .pnlm-load-box{ background:#1c1815 !important; }
-  .skeleton{ height:260px; background:linear-gradient(90deg,#1c1815 25%,#241f19 37%,#1c1815 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; }
+  .skeleton{ height:80vh; max-height:720px; min-height:340px; background:linear-gradient(90deg,#1c1815 25%,#241f19 37%,#1c1815 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; }
   @keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
 </style>
 </head>
 <body class="min-h-screen">
-<div class="max-w-md mx-auto px-5 pt-10 pb-24">
+<div class="max-w-md md:max-w-3xl lg:max-w-4xl mx-auto px-5 pt-10 pb-24">
 
   <header class="mb-8 fade-in">
     <div class="flex items-center gap-2 mb-6">
@@ -120,10 +120,16 @@
       urls.forEach((url, i) => {
         const panoId = 'pano' + i;
         const card = document.createElement('div');
-        card.className = 'frame rounded-2xl overflow-hidden fade-in';
+        card.className = 'frame rounded-2xl overflow-hidden fade-in relative';
         card.style.animationDelay = (i * 0.08) + 's';
         card.innerHTML = `
-          <div id="${panoId}" class="pano"></div>
+          <div class="relative">
+            <div id="${panoId}" class="pano"></div>
+            <button class="fsBtn absolute bottom-3 right-3 flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold z-10" style="background:rgba(20,17,15,0.85); color:var(--cream); border:1px solid rgba(227,178,60,0.4); backdrop-filter:blur(4px);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+              Ver em tela cheia
+            </button>
+          </div>
           <div class="px-4 py-3 text-xs tracking-wide uppercase flex items-center justify-between" style="color:var(--amber-dim)">
             <span>${labels[i] || 'Foto'}</span>
             <span class="opacity-60">360°</span>
@@ -131,9 +137,9 @@
         `;
         galleryEl.appendChild(card);
 
-        const hqUrl = url.replace('/upload/', '/upload/q_auto:best,f_auto/');
+        const hqUrl = url.replace('/upload/', '/upload/q_100/');
 
-        pannellum.viewer(panoId, {
+        const viewer = pannellum.viewer(panoId, {
           type: 'equirectangular',
           panorama: hqUrl,
           autoLoad: true,
@@ -142,6 +148,8 @@
           showFullscreenCtrl: true,
           hfov: 100
         });
+
+        card.querySelector('.fsBtn').addEventListener('click', () => viewer.toggleFullscreen());
       });
     } catch (err) {
       loadingEl.classList.add('hidden');
