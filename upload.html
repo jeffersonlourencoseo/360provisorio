@@ -19,7 +19,7 @@
 <body class="min-h-screen">
 <div class="max-w-md mx-auto px-5 py-8">
 
-  <h1 class="text-2xl font-semibold mb-1">Fotos do cliente</h1>
+  <h1 class="text-2xl font-semibold mb-1">Fotos 360° do cliente</h1>
   <p class="text-sm opacity-60 mb-6">Preenche o nome, tira as 3 fotos e o link já sai pronto.</p>
 
   <!-- ============ CONFIG: preencha uma vez ============ -->
@@ -35,17 +35,17 @@
 
   <div class="space-y-4 mb-6">
     <div class="slot frame p-3" data-idx="1">
-      <p class="text-sm mb-2">1. Fachada</p>
+      <p class="text-sm mb-2">1. Fachada (360°)</p>
       <input type="file" accept="image/*" class="fileInput text-xs">
       <div class="preview mt-2"></div>
     </div>
     <div class="slot frame p-3" data-idx="2">
-      <p class="text-sm mb-2">2. Interna</p>
+      <p class="text-sm mb-2">2. Interna (360°)</p>
       <input type="file" accept="image/*" class="fileInput text-xs">
       <div class="preview mt-2"></div>
     </div>
     <div class="slot frame p-3" data-idx="3">
-      <p class="text-sm mb-2">3. Interna</p>
+      <p class="text-sm mb-2">3. Interna (360°)</p>
       <input type="file" accept="image/*" class="fileInput text-xs">
       <div class="preview mt-2"></div>
     </div>
@@ -64,7 +64,7 @@
 </div>
 
 <script>
-  const uploaded = {1:null, 2:null, 3:null};
+  const uploaded = {1:null, 2:null, 3:null, 4:null};
   const statusEl = document.getElementById('status');
 
   document.querySelectorAll('.slot').forEach(slot => {
@@ -105,11 +105,13 @@
 
   function checkDone() {
     const nome = document.getElementById('nomeInput').value.trim();
-    const urls = [uploaded[1], uploaded[2], uploaded[3]].filter(Boolean);
-    if (urls.length === 0) return;
+    const hasAny = uploaded[1] || uploaded[2] || uploaded[3];
+    if (!hasAny) return;
 
-    const link = `${GALLERY_URL}?nome=${encodeURIComponent(nome)}` +
-      urls.map((u, i) => `&u${i+1}=${encodeURIComponent(u)}`).join('');
+    let link = `${GALLERY_URL}?nome=${encodeURIComponent(nome)}`;
+    [1, 2, 3].forEach(i => {
+      if (uploaded[i]) link += `&u${i}=${encodeURIComponent(uploaded[i])}`;
+    });
 
     document.getElementById('resultBox').classList.remove('hidden');
     document.getElementById('linkText').textContent = link;
