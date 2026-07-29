@@ -20,18 +20,19 @@
 <div class="max-w-md mx-auto px-5 py-8">
 
   <h1 class="text-2xl font-semibold mb-1">Fotos 360° do cliente</h1>
-  <p class="text-sm opacity-60 mb-6">Preenche o nome, tira as 3 fotos e o link já sai pronto.</p>
+  <p class="text-sm opacity-60 mb-6">Preenche o nome, sobe as 3 fotos, e o link curto sai pronto.</p>
 
   <!-- ============ CONFIG: preencha uma vez ============ -->
   <script>
     const CLOUD_NAME = "wxhk7cbf";
     const UPLOAD_PRESET = "tmjl360";
     const GALLERY_URL = "https://360provisorio.vercel.app/gallery.html";
+    const DIAS_VALIDADE = 7; // depois de quantos dias o link expira
   </script>
   <!-- ==================================================== -->
 
   <label class="block text-xs uppercase tracking-wide opacity-60 mb-1">Nome do cliente / estabelecimento</label>
-  <input id="nomeInput" type="text" placeholder="ex: salao-da-maria" class="w-full frame px-4 py-3 mb-6 bg-transparent outline-none text-base">
+  <input id="nomeInput" type="text" placeholder="ex: salao da maria" class="w-full frame px-4 py-3 mb-6 bg-transparent outline-none text-base">
 
   <div class="space-y-4 mb-6">
     <div class="slot frame p-3" data-idx="1">
@@ -51,21 +52,34 @@
     </div>
   </div>
 
+  <button id="gerarBtn" disabled class="w-full rounded-xl py-3 mb-4 text-sm font-semibold opacity-40" style="background:#e3b23c; color:#14110f">Gerar link (sobe pelo menos 1 foto)</button>
+
   <div id="resultBox" class="hidden frame p-4 mb-4">
-    <p class="text-sm mb-2 amber">Link pronto:</p>
-    <p id="linkText" class="text-xs break-all opacity-80 mb-3"></p>
+    <p class="text-sm mb-2 amber">Link pronto (válido por <span id="diasTxt"></span> dias):</p>
+    <p id="linkText" class="text-sm break-all opacity-90 mb-3"></p>
     <div class="flex gap-2">
       <button id="copyBtn" class="flex-1 bg-white/10 rounded-lg py-2 text-sm">Copiar link</button>
       <a id="waLink" target="_blank" class="flex-1 text-center rounded-lg py-2 text-sm font-semibold" style="background:#e3b23c; color:#14110f">Enviar no WhatsApp</a>
     </div>
   </div>
 
-  <p id="status" class="text-xs opacity-50 text-center"></p>
+  <p id="status" class="text-xs opacity-50 text-center mb-4"></p>
+
+  <button id="resetBtn" class="w-full text-xs opacity-50 underline py-2">Começar novo cliente</button>
 </div>
 
 <script>
-  const uploaded = {1:null, 2:null, 3:null, 4:null};
+  document.getElementById('diasTxt').textContent = DIAS_VALIDADE;
+
+  let uploaded = {1:null, 2:null, 3:null};
   const statusEl = document.getElementById('status');
+
+  function slugify(str) {
+    return str.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || 'cliente';
+  }
 
   document.querySelectorAll('.slot').forEach(slot => {
     const idx = slot.dataset.idx;
@@ -95,7 +109,7 @@
         slot.classList.add('done');
         preview.innerHTML = `<img src="${data.secure_url}">`;
         statusEl.textContent = '';
-        checkDone();
+        updateGerarBtn();
       } catch (err) {
         preview.innerHTML = '';
         statusEl.textContent = `Erro na foto ${idx}: ${err.message}`;
@@ -103,27 +117,84 @@
     });
   });
 
-  function checkDone() {
-    const nome = document.getElementById('nomeInput').value.trim();
-    const hasAny = uploaded[1] || uploaded[2] || uploaded[3];
-    if (!hasAny) return;
+  const gerarBtn = document.getElementById('gerarBtn');
 
-    let link = `${GALLERY_URL}?nome=${encodeURIComponent(nome)}`;
-    [1, 2, 3].forEach(i => {
-      if (uploaded[i]) link += `&u${i}=${encodeURIComponent(uploaded[i])}`;
-    });
-
-    document.getElementById('resultBox').classList.remove('hidden');
-    document.getElementById('linkText').textContent = link;
-    document.getElementById('copyBtn').onclick = () => {
-      navigator.clipboard.writeText(link);
-      document.getElementById('copyBtn').textContent = 'Copiado!';
-      setTimeout(() => document.getElementById('copyBtn').textContent = 'Copiar link', 1500);
-    };
-    document.getElementById('waLink').href = `https://wa.me/?text=${encodeURIComponent('Olha as fotos do seu negócio: ' + link)}`;
+  function updateGerarBtn() {
+    const count = [uploaded[1], uploaded[2], uploaded[3]].filter(Boolean).length;
+    if (count > 0) {
+      gerarBtn.disabled = false;
+      gerarBtn.classList.remove('opacity-40');
+      gerarBtn.textContent = `Gerar link (${count} foto${count > 1 ? 's' : ''})`;
+    } else {
+      gerarBtn.disabled = true;
+      gerarBtn.classList.add('opacity-40');
+      gerarBtn.textContent = 'Gerar link (sobe pelo menos 1 foto)';
+    }
   }
 
-  document.getElementById('nomeInput').addEventListener('input', checkDone);
+  gerarBtn.addEventListener('click', gerarLink);
+
+  async function gerarLink() {
+    const fotos = [uploaded[1], uploaded[2], uploaded[3]].filter(Boolean);
+    if (fotos.length === 0) return;
+
+    const nomeRaw = document.getElementById('nomeInput').value.trim() || 'cliente';
+    const slug = slugify(nomeRaw) + '-' + Math.random().toString(36).slice(2, 6);
+
+    statusEl.textContent = 'Gerando link curto...';
+    gerarBtn.disabled = true;
+
+    const manifest = {
+      nome: nomeRaw,
+      fotos: fotos,
+      exp: Date.now() + DIAS_VALIDADE * 24 * 60 * 60 * 1000
+    };
+
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const manifestFile = new File([blob], slug + '.json');
+
+    const formData = new FormData();
+    formData.append('file', manifestFile);
+    formData.append('upload_preset', UPLOAD_PRESET);
+    formData.append('public_id', slug);
+
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (!data.secure_url) throw new Error(data.error?.message || 'falha ao gerar link');
+
+      const link = `${GALLERY_URL}?c=${slug}`;
+      statusEl.textContent = '';
+
+      document.getElementById('resultBox').classList.remove('hidden');
+      document.getElementById('linkText').textContent = link;
+      document.getElementById('copyBtn').onclick = () => {
+        navigator.clipboard.writeText(link);
+        document.getElementById('copyBtn').textContent = 'Copiado!';
+        setTimeout(() => document.getElementById('copyBtn').textContent = 'Copiar link', 1500);
+      };
+      document.getElementById('waLink').href = `https://wa.me/?text=${encodeURIComponent('Olha as fotos do seu negócio: ' + link)}`;
+    } catch (err) {
+      statusEl.textContent = `Erro ao gerar link: ${err.message}`;
+      gerarBtn.disabled = false;
+    }
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    uploaded = {1:null, 2:null, 3:null};
+    document.getElementById('nomeInput').value = '';
+    document.getElementById('resultBox').classList.add('hidden');
+    statusEl.textContent = '';
+    updateGerarBtn();
+    document.querySelectorAll('.slot').forEach(slot => {
+      slot.classList.remove('done');
+      slot.querySelector('.preview').innerHTML = '';
+      slot.querySelector('.fileInput').value = '';
+    });
+  });
 </script>
 </body>
 </html>
