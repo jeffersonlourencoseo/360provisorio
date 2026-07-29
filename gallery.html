@@ -25,6 +25,8 @@
   .btn-primary:active{ transform: scale(.97); }
   .pano{ width:100%; height:260px; background:#0d0b09; }
   .pnlm-load-box{ background:#1c1815 !important; }
+  .skeleton{ height:260px; background:linear-gradient(90deg,#1c1815 25%,#241f19 37%,#1c1815 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; }
+  @keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
 </style>
 </head>
 <body class="min-h-screen">
@@ -39,13 +41,23 @@
     <p id="subtitle" class="text-sm opacity-70">Arraste o dedo nas fotos abaixo pra olhar ao redor.</p>
   </header>
 
+  <div id="loading" class="frame rounded-2xl overflow-hidden fade-in">
+    <div class="skeleton"></div>
+  </div>
+
   <div id="gallery" class="space-y-4"></div>
 
   <div id="empty" class="hidden frame rounded-2xl p-6 text-center text-sm opacity-70 fade-in">
     Esse link ainda não tem fotos. Confirma com quem te mandou.
   </div>
 
-  <footer class="mt-10 frame rounded-2xl p-5 fade-in">
+  <div id="expired" class="hidden frame rounded-2xl p-6 text-center fade-in">
+    <p class="display text-lg mb-2">Esse link expirou</p>
+    <p class="text-sm opacity-70 mb-4">Fala com a gente pra receber fotos atualizadas do seu espaço.</p>
+    <a id="expiredWa" href="#" target="_blank" class="btn-primary inline-block rounded-xl px-6 py-3">Falar no WhatsApp</a>
+  </div>
+
+  <footer id="footer" class="hidden mt-10 frame rounded-2xl p-5 fade-in">
     <p class="display text-lg mb-1">Gostou do que viu?</p>
     <p class="text-sm opacity-70 mb-4">Fechando com a gente, essas fotos vão pro seu perfil do Google — e dá pra fazer mais ângulos do espaço.</p>
     <a id="whatsBtn" href="#" target="_blank" class="btn-primary block text-center rounded-xl py-3">Falar no WhatsApp</a>
@@ -54,49 +66,88 @@
   <p class="text-center text-[11px] opacity-40 mt-6">TMJL Marketing Digital</p>
 </div>
 
+<!-- ============ CONFIG ============ -->
+<script>
+  const CLOUD_NAME = "wxhk7cbf";
+  const whatsNumber = "5521997751577";
+</script>
+<!-- ================================= -->
+
 <script>
   const params = new URLSearchParams(window.location.search);
-  const nome = params.get('nome') || '';
-  const urls = [params.get('u1'), params.get('u2'), params.get('u3')].filter(Boolean);
-  const labels = ["Fachada", "Ambiente interno", "Ambiente interno"];
+  const code = params.get('c');
 
+  const loadingEl = document.getElementById('loading');
   const galleryEl = document.getElementById('gallery');
   const emptyEl = document.getElementById('empty');
+  const expiredEl = document.getElementById('expired');
+  const footerEl = document.getElementById('footer');
   const subtitleEl = document.getElementById('subtitle');
   const whatsBtn = document.getElementById('whatsBtn');
-  const whatsNumber = "5521997751577"; // seu número
+  const expiredWa = document.getElementById('expiredWa');
+  const labels = ["Fachada", "Ambiente interno", "Ambiente interno"];
 
-  if (urls.length === 0) {
-    emptyEl.classList.remove('hidden');
-  } else {
-    if (nome) subtitleEl.textContent = `${nome} — arraste o dedo nas fotos abaixo pra olhar ao redor.`;
-    whatsBtn.href = `https://wa.me/${whatsNumber}?text=` + encodeURIComponent(`Oi Jefferson, vi as fotos${nome ? ' de ' + nome : ''} e quero fechar!`);
+  async function init() {
+    if (!code) {
+      loadingEl.classList.add('hidden');
+      emptyEl.classList.remove('hidden');
+      return;
+    }
 
-    urls.forEach((url, i) => {
-      const panoId = 'pano' + i;
-      const card = document.createElement('div');
-      card.className = 'frame rounded-2xl overflow-hidden fade-in';
-      card.style.animationDelay = (i * 0.08) + 's';
-      card.innerHTML = `
-        <div id="${panoId}" class="pano"></div>
-        <div class="px-4 py-3 text-xs tracking-wide uppercase flex items-center justify-between" style="color:var(--amber-dim)">
-          <span>${labels[i] || 'Foto'}</span>
-          <span class="opacity-60">360°</span>
-        </div>
-      `;
-      galleryEl.appendChild(card);
+    try {
+      const res = await fetch(`https://res.cloudinary.com/${CLOUD_NAME}/raw/upload/${code}.json`);
+      if (!res.ok) throw new Error('não encontrado');
+      const data = await res.json();
 
-      pannellum.viewer(panoId, {
-        type: 'equirectangular',
-        panorama: url,
-        autoLoad: true,
-        compass: false,
-        showZoomCtrl: false,
-        showFullscreenCtrl: true,
-        hfov: 100
+      loadingEl.classList.add('hidden');
+
+      if (data.exp && Date.now() > data.exp) {
+        expiredEl.classList.remove('hidden');
+        expiredWa.href = `https://wa.me/${whatsNumber}?text=` + encodeURIComponent(`Oi Jefferson, o link de ${data.nome || ''} expirou, pode me mandar de novo?`);
+        return;
+      }
+
+      const urls = (data.fotos || []).filter(Boolean);
+      if (urls.length === 0) {
+        emptyEl.classList.remove('hidden');
+        return;
+      }
+
+      if (data.nome) subtitleEl.textContent = `${data.nome} — arraste o dedo nas fotos abaixo pra olhar ao redor.`;
+      whatsBtn.href = `https://wa.me/${whatsNumber}?text=` + encodeURIComponent(`Oi Jefferson, vi as fotos${data.nome ? ' de ' + data.nome : ''} e quero fechar!`);
+      footerEl.classList.remove('hidden');
+
+      urls.forEach((url, i) => {
+        const panoId = 'pano' + i;
+        const card = document.createElement('div');
+        card.className = 'frame rounded-2xl overflow-hidden fade-in';
+        card.style.animationDelay = (i * 0.08) + 's';
+        card.innerHTML = `
+          <div id="${panoId}" class="pano"></div>
+          <div class="px-4 py-3 text-xs tracking-wide uppercase flex items-center justify-between" style="color:var(--amber-dim)">
+            <span>${labels[i] || 'Foto'}</span>
+            <span class="opacity-60">360°</span>
+          </div>
+        `;
+        galleryEl.appendChild(card);
+
+        pannellum.viewer(panoId, {
+          type: 'equirectangular',
+          panorama: url,
+          autoLoad: true,
+          compass: false,
+          showZoomCtrl: false,
+          showFullscreenCtrl: true,
+          hfov: 100
+        });
       });
-    });
+    } catch (err) {
+      loadingEl.classList.add('hidden');
+      emptyEl.classList.remove('hidden');
+    }
   }
+
+  init();
 </script>
 </body>
 </html>
