@@ -131,9 +131,11 @@
         `;
         galleryEl.appendChild(card);
 
+        const hqUrl = url.replace('/upload/', '/upload/q_auto:best,f_auto/');
+
         pannellum.viewer(panoId, {
           type: 'equirectangular',
-          panorama: url,
+          panorama: hqUrl,
           autoLoad: true,
           compass: false,
           showZoomCtrl: false,
